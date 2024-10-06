@@ -1,0 +1,38 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include wandansible.caddy"
+      ansible.builtin.include_role:
+        name: "wandansible.caddy"
+      vars:
+        caddy_packages:
+          - github.com/mholt/caddy-webdav
+
+        caddy_file: |
+          import test.Caddyfile
+          import sites-enabled/*.Caddyfile
+
+        caddy_files:
+          - name: test.Caddyfile
+            config: |
+              :80 {
+                root * /var/www/
+                file_server
+              }
+
+          - name: website1.Caddyfile
+            dir: sites-enabled
+            config: |
+              website1.example.org {
+                root * /var/www/website1
+                file_server
+              }
+
+          - name: website2.Caddyfile
+            dir: sites-enabled
+            config: |
+              website2.example.org {
+                root * /var/www/website2
+                file_server
+              }

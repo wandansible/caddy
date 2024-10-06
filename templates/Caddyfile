@@ -1,0 +1,3 @@
+# {{ ansible_managed }}
+
+{{ item.config if item.config is defined else caddy_file }}

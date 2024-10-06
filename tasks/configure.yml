@@ -1,0 +1,47 @@
+---
+- name: Configure /etc/caddy/Caddyfile
+  ansible.builtin.template:
+    src: "Caddyfile"
+    dest: "/etc/caddy/Caddyfile"
+    owner: "root"
+    group: "root"
+    mode: "u=rw,g=r,o=r"
+  when: caddy_file != ""
+  notify: reload caddy
+
+- name: Configure Caddyfiles
+  ansible.builtin.template:
+    src: "Caddyfile"
+    dest: "/etc/caddy/{{ item.name }}"
+    owner: "root"
+    group: "root"
+    mode: "u=rw,g=r,o=r"
+  notify: reload caddy
+  loop: "{{ caddy_files | selectattr('dir', 'undefined') }}"
+  loop_control:
+    label: "/etc/caddy/{{ item.name }}"
+
+- name: Create subdirectories for Caddyfiles
+  ansible.builtin.file:
+    path: "/etc/caddy/{{ item }}"
+    owner: "root"
+    group: "root"
+    mode: "u=rwx,g=rx,o=rx"
+    state: "directory"
+  loop: >-
+    {{ caddy_files
+       | selectattr('dir', 'defined')
+       | map(attribute="dir")
+       | unique }}
+
+- name: Configure Caddyfiles in subdirectory
+  ansible.builtin.template:
+    src: "Caddyfile"
+    dest: "/etc/caddy/{{ item.dir }}/{{ item.name }}"
+    owner: "root"
+    group: "root"
+    mode: "u=rw,g=r,o=r"
+  notify: reload caddy
+  loop: "{{ caddy_files | selectattr('dir', 'defined') }}"
+  loop_control:
+    label: "/etc/caddy/{{ item.dir }}/{{ item.name }}"

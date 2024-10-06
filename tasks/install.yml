@@ -1,0 +1,30 @@
+---
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: u=rwx,g=rx,o=rx
+
+- name: Add caddy apt signing key
+  ansible.builtin.apt_key:
+    id: "{{ caddy_apt_key_fingerprint }}"
+    url: "{{ caddy_apt_key_url }}"
+    keyring: /etc/apt/keyrings/caddy.gpg
+    state: present
+
+- name: Add caddy apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/caddy.gpg]
+      {{ caddy_apt_repo }}
+    filename: caddy
+    update_cache: true
+    state: present
+
+- name: Install caddy
+  ansible.builtin.apt:
+    name: "{{ caddy_apt_packages }}"
+    install_recommends: false
+    state: present

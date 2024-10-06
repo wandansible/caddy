@@ -1,0 +1,106 @@
+---
+- name: Divert caddy binary provided by apt package
+  community.general.dpkg_divert:
+    path: /usr/bin/caddy
+    rename: true
+    force: true
+    state: "{{ 'present' if caddy_packages | length >= 1 else 'absent' }}"
+  notify: restart caddy
+
+- name: Create custom caddy binary
+  ansible.builtin.copy:
+    src: /usr/bin/caddy.distrib
+    dest: /usr/bin/caddy.custom
+    force: false
+    remote_src: true
+    owner: root
+    group: root
+    mode: "u=rwx,g=rx,o=rx"
+  when: "caddy_packages | length >= 1"
+
+- name: Configure alternative link for original caddy binary
+  community.general.alternatives:
+    name: caddy
+    link: /usr/bin/caddy
+    path: /usr/bin/caddy.distrib
+    priority: 10
+    state: "{{ 'auto' if caddy_packages | length >= 1 else 'absent' }}"
+  notify: restart caddy
+
+- name: Configure alternative link for custom caddy binary
+  community.general.alternatives:
+    name: caddy
+    link: /usr/bin/caddy
+    path: /usr/bin/caddy.custom
+    priority: 50
+    state: "{{ 'auto' if caddy_packages | length >= 1 else 'absent' }}"
+  notify: restart caddy
+
+- name: Remove custom caddy binary
+  ansible.builtin.file:
+    path: /usr/bin/caddy.custom
+    state: absent
+  when: "caddy_packages | length == 0"
+
+- name: Get list of installed caddy packages
+  ansible.builtin.command:
+    cmd: caddy list-modules --skip-standard --packages
+  register: _caddy_list_modules_cmd
+  changed_when: false
+
+- name: Set installed packages fact
+  ansible.builtin.set_fact:
+    _caddy_packages: >-
+      {{ _caddy_list_modules_cmd.stdout_lines
+         | select("search", "^[\w.]+ \S+$")
+         | map("split", " ")
+         | map("last") }}
+
+- name: Install caddy packages
+  ansible.builtin.command:
+    cmd: caddy add-package {{ item }}
+  register: _caddy_add_package_cmd
+  changed_when: "'requesting build' in _caddy_add_package_cmd.stderr"
+  failed_when: >-
+    _caddy_add_package_cmd.rc != 0
+    and 'package is already added' not in _caddy_add_package_cmd.stderr
+  loop: "{{ caddy_packages }}"
+  when: "item not in _caddy_packages"
+  notify: restart caddy
+
+- name: Remove caddy packages
+  ansible.builtin.command:
+    cmd: caddy remove-package {{ _caddy_packages_remove | join(" ") }}
+  vars:
+    _caddy_packages_remove: "{{ _caddy_packages | difference(caddy_packages) }}"
+  register: _caddy_remove_package_cmd
+  changed_when: "'requesting build' in _caddy_remove_package_cmd.stderr"
+  when: "_caddy_packages_remove | length >= 1"
+  notify: restart caddy
+
+- name: Add caddy upgrade apt hook script
+  ansible.builtin.template:
+    src: "caddy-upgrade.sh"
+    dest: "{{ caddy_dpkg_hook_script }}"
+    owner: "root"
+    group: "root"
+    mode: "u=rwx,g=rx,o=rx"
+  when: "caddy_packages | length >= 1"
+
+- name: Configure caddy upgrade apt hook script
+  ansible.builtin.template:
+    src: "apt.conf.d"
+    dest: "/etc/apt/apt.conf.d/99caddy-upgrade"
+    owner: "root"
+    group: "root"
+    mode: "u=rw,g=r,o=r"
+  when: "caddy_packages | length >= 1"
+
+- name: Remove caddy upgrade apt hook script
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ caddy_dpkg_hook_script }}"
+    - "/etc/apt/apt.conf.d/99caddy-upgrade"
+  when: "caddy_packages | length == 0"

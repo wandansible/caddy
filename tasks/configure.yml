@@ -4,18 +4,18 @@
     src: "Caddyfile"
     dest: "/etc/caddy/Caddyfile"
     owner: "root"
-    group: "root"
-    mode: "u=rw,g=r,o=r"
+    group: "caddy"
+    mode: "u=rw,g=r,o="
   when: caddy_file != ""
   notify: reload caddy
 
-- name: Configure Caddyfiles
+- name: Configure additional Caddyfiles in /etc/caddy/
   ansible.builtin.template:
     src: "Caddyfile"
     dest: "/etc/caddy/{{ item.name }}"
     owner: "root"
-    group: "root"
-    mode: "u=rw,g=r,o=r"
+    group: "caddy"
+    mode: "u=rw,g=r,o="
   notify: reload caddy
   loop: "{{ caddy_files | selectattr('dir', 'undefined') }}"
   loop_control:
@@ -34,13 +34,13 @@
        | map(attribute="dir")
        | unique }}
 
-- name: Configure Caddyfiles in subdirectory
+- name: Configure Caddyfiles in subdirectories
   ansible.builtin.template:
     src: "Caddyfile"
     dest: "/etc/caddy/{{ item.dir }}/{{ item.name }}"
     owner: "root"
-    group: "root"
-    mode: "u=rw,g=r,o=r"
+    group: "caddy"
+    mode: "u=rw,g=r,o="
   notify: reload caddy
   loop: "{{ caddy_files | selectattr('dir', 'defined') }}"
   loop_control:

@@ -28,3 +28,20 @@
     name: "{{ caddy_apt_packages }}"
     install_recommends: false
     state: present
+
+- name: Add caddy service overrides directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/caddy.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: u=rwx,g=rx,o=rx
+
+- name: Add caddy service overrides
+  ansible.builtin.template:
+    src: service-overrides.conf
+    dest: /etc/systemd/system/caddy.service.d/service-overrides.conf
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify: systemd daemon-reload

@@ -1,0 +1,49 @@
+---
+- name: Install caddy package {{ item }}
+  vars:
+    _package: "{{ (item | split('@'))[0] }}"
+    _version: "{{ (item | split('@'))[1] | default('') }}"
+  block:
+    - name: Get latest version for package {{ item }}
+      ansible.builtin.uri:
+        url: "{{ ['https://proxy.golang.org', _package, '@latest'] | path_join }}"
+        method: GET
+        return_content: true
+        status_code: 200
+        headers:
+          Content-Type: application/json
+      register: _package_version_info
+      when: _version == "latest"
+
+    - name: Add package {{ item }} without version to caddy
+      ansible.builtin.command:
+        cmd: "caddy add-package {{ item }}"
+      register: _caddy_add_package_cmd
+      changed_when: "'requesting build' in _caddy_add_package_cmd.stderr"
+      failed_when: >-
+        _caddy_add_package_cmd.rc != 0
+        and "package is already added" not in _caddy_add_package_cmd.stderr
+      when:
+        - _version == ""
+        - _package not in _caddy_packages
+      notify: restart caddy
+
+    - name: Add package {{ item }} with version to caddy
+      ansible.builtin.command:
+        cmd: >-
+          caddy add-package {{
+            _package + "@" + _package_version_info.json.Version
+            if _version == "latest"
+            else item
+          }}
+      register: _caddy_add_package_cmd
+      changed_when: "'requesting build' in _caddy_add_package_cmd.stderr"
+      failed_when: >-
+        _caddy_add_package_cmd.rc != 0
+        and "package is already added" not in _caddy_add_package_cmd.stderr
+      when:
+        - _version != ""
+        - _package not in _caddy_packages
+          or (_version != "latest" and _version != _caddy_packages[_package])
+          or (_version == "latest" and _package_version_info.json.Version != _caddy_packages[_package])
+      notify: restart caddy

@@ -44,35 +44,33 @@
 
 - name: Get list of installed caddy packages
   ansible.builtin.command:
-    cmd: caddy list-modules --skip-standard --packages
+    cmd: caddy list-modules --skip-standard --packages --versions
   register: _caddy_list_modules_cmd
   changed_when: false
 
 - name: Set installed packages fact
   ansible.builtin.set_fact:
     _caddy_packages: >-
-      {{ _caddy_list_modules_cmd.stdout_lines
-         | select("search", "^[\w.]+ \S+$")
-         | map("split", " ")
-         | map("last") }}
+      {{
+           _caddy_list_modules_cmd.stdout_lines
+           | select("search", "^[\w.]+ \S+ \S+$")
+           | map("regex_search", "\S+ \S+$")
+           | map("split", " ")
+           | map("reverse")
+           | community.general.dict
+      }}
 
 - name: Install caddy packages
-  ansible.builtin.command:
-    cmd: caddy add-package {{ item }}
-  register: _caddy_add_package_cmd
-  changed_when: "'requesting build' in _caddy_add_package_cmd.stderr"
-  failed_when: >-
-    _caddy_add_package_cmd.rc != 0
-    and 'package is already added' not in _caddy_add_package_cmd.stderr
+  ansible.builtin.include_tasks:
+    file: install-package.yml
   loop: "{{ caddy_packages }}"
-  when: "item not in _caddy_packages"
-  notify: restart caddy
 
 - name: Remove caddy packages
   ansible.builtin.command:
     cmd: caddy remove-package {{ _caddy_packages_remove | join(" ") }}
   vars:
-    _caddy_packages_remove: "{{ _caddy_packages | difference(caddy_packages) }}"
+    _caddy_packages_remove: >-
+      {{ _caddy_packages.keys() | difference(caddy_packages | map("regex_replace", "@.+$", "")) }}
   register: _caddy_remove_package_cmd
   changed_when: "'requesting build' in _caddy_remove_package_cmd.stderr"
   when: "_caddy_packages_remove | length >= 1"

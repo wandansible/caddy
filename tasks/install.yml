@@ -1,27 +1,31 @@
 ---
-- name: Create apt keyrings directory
-  ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
-    owner: root
-    group: root
-    mode: u=rwx,g=rx,o=rx
+- name: Install dependencies
+  ansible.builtin.apt:
+    pkg:
+      - "python3-debian"
 
-- name: Add caddy apt signing key
-  ansible.builtin.apt_key:
-    id: "{{ caddy_apt_key_fingerprint }}"
-    url: "{{ caddy_apt_key_url }}"
-    keyring: /etc/apt/keyrings/caddy.gpg
-    state: present
+- name: Remove old caddy apt configuration
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/apt/sources.list.d/caddy.list"
+    - "/etc/apt/keyrings/caddy.gpg"
 
 - name: Add caddy apt repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [signed-by=/etc/apt/keyrings/caddy.gpg]
-      {{ caddy_apt_repo }}
-    filename: caddy
-    update_cache: true
+  ansible.builtin.deb822_repository:
+    name: caddy
+    uris: "{{ caddy_apt_repo_url }}"
+    suites: "{{ caddy_apt_repo_suite }}"
+    components: "{{ caddy_apt_repo_component }}"
+    signed_by: "{{ caddy_apt_repo_gpg_key }}"
     state: present
+  register: _apt_repo
+
+- name: Refresh apt cache when apt repository changes
+  ansible.builtin.apt:
+    update_cache: true
+  when: _apt_repo is changed
 
 - name: Install caddy
   ansible.builtin.apt:

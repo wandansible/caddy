@@ -22,15 +22,11 @@
     state: present
   register: _apt_repo
 
-- name: Refresh apt cache when apt repository changes
-  ansible.builtin.apt:
-    update_cache: true
-  when: _apt_repo is changed
-
 - name: Install caddy
   ansible.builtin.apt:
     name: "{{ caddy_apt_packages }}"
     install_recommends: false
+    update_cache: "{{ true if _apt_repo is changed else false }}"
     state: present
 
 - name: Add caddy service overrides directory

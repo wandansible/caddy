@@ -17,21 +17,29 @@ ENTRY POINT: *main* - Install and configure caddy webserver
 
 Options (= indicates it is required):
 
-- caddy_apt_key_fingerprint  Fingerprint for caddy apt repo GPG key
-          default: 65760C51EDEA2017CEA2CA15155B6D79CA56EA34
-          type: str
-
-- caddy_apt_key_url  URL for caddy apt repo GPG key
-          default: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
-          type: str
-
 - caddy_apt_packages  List of packages to install
           default: [caddy]
           elements: str
           type: list
 
-- caddy_apt_repo  Entry for caddy apt repo in sources.list file
-          default: https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main
+- caddy_apt_repo_component  Component to use for the apt repository
+          default: main
+          type: str
+
+- caddy_apt_repo_gpg_key  Either a URL to a GPG key, absolute path to a keyring file, one or
+                           more fingerprints of keys either in the
+                           trusted.gpg keyring or in the keyrings in
+                           the trusted.gpg.d/ directory, or an ASCII
+                           armored GPG public key block
+          default: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+          type: str
+
+- caddy_apt_repo_suite  Suite to use for the apt repository
+          default: any-version
+          type: str
+
+- caddy_apt_repo_url  Base URL for the apt repository
+          default: https://dl.cloudsmith.io/public/caddy/stable/deb/debian
           type: str
 
 - caddy_dpkg_hook_script  Path to where dpkg hook for caddy should be installed

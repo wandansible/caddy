@@ -6,20 +6,29 @@ argument_specs:
       Installs the caddy webserver along with any non-standard caddy plugins required.
       Allows for caddy to be configured by adding one or more Caddyfiles.
     options:
-      caddy_apt_key_fingerprint:
-        description: Fingerprint for caddy apt repo GPG key
+      caddy_apt_repo_url:
+        description: Base URL for the apt repository
         type: str
-        default: "65760C51EDEA2017CEA2CA15155B6D79CA56EA34"
+        default: "https://dl.cloudsmith.io/public/caddy/stable/deb/debian"
 
-      caddy_apt_key_url:
-        description: URL for caddy apt repo GPG key
+      caddy_apt_repo_suite:
+        description: Suite to use for the apt repository
+        type: str
+        default: "any-version"
+
+      caddy_apt_repo_component:
+        description: Component to use for the apt repository
+        type: str
+        default: "main"
+
+      caddy_apt_repo_gpg_key:
+        description: |
+          Either a URL to a GPG key, absolute path to a keyring file,
+          one or more fingerprints of keys either in the trusted.gpg
+          keyring or in the keyrings in the trusted.gpg.d/ directory,
+          or an ASCII armored GPG public key block
         type: str
         default: "https://dl.cloudsmith.io/public/caddy/stable/gpg.key"
-
-      caddy_apt_repo:
-        description: Entry for caddy apt repo in sources.list file
-        type: str
-        default: "https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
 
       caddy_apt_packages:
         description: List of packages to install

@@ -16,6 +16,7 @@
       delay: 15
       register: _package_version_info
       when: _version == "latest"
+      check_mode: false
 
     - name: Add package {{ item }} without version to caddy
       ansible.builtin.command:

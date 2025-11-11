@@ -47,6 +47,7 @@
     cmd: caddy list-modules --skip-standard --packages --versions
   register: _caddy_list_modules_cmd
   changed_when: false
+  check_mode: false
 
 - name: Set installed packages fact
   ansible.builtin.set_fact:
